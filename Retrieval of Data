@@ -1,0 +1,74 @@
+################
+##PACKAGES##
+################
+
+library(httr) # GET function 
+library(purrr) # map through pages 
+library(jsonlite) # convert JSON to readable text for R 
+library(lubridate) # recognise ymd_hm
+
+################
+##RETRIEVING OPENAQ DATA##
+################
+
+# Request daily PM2.5 data for Sheffield Devonshire Green (sensor 2508)
+result <- GET(
+  "https://api.openaq.org/v3/sensors/2508/measurements/daily",
+  query = list(
+    limit = 1000,
+    parameter = "pm25",
+    datetime_from = "2024-01-01T00:00:00Z",
+    datetime_to   = "2024-12-31T23:59:59Z"
+  ),
+  add_headers("X-API-Key" = "2145ca5b8db97d3cd55567b117b99ca1db23f0b75fb2c12986529aa5276ef7dc")
+)
+
+# Parse JSON
+aq_json <- content(result, "parsed")
+
+# Conversion of data to a more readable table
+pm25_daily <- map_df(aq_json$results, function(x) {
+  data.frame(
+    date = ymd(substr(x$period$datetimeFrom$utc, 1, 10)),  
+    pm25_avg = x$summary$avg
+  )
+})
+
+write.csv(pm25_daily, "Sheffield_PM25_Daily.csv", row.names = FALSE) # Ready for excel without the row numbers as a first column 
+
+################
+##RETRIEVING OPENMETEO DATA##
+################
+
+openmeteo_url <- "https://archive-api.open-meteo.com/v1/archive" # Retrieving the link from OpenMeteo
+
+# Creating a request from OpenMeteo
+openmeteo <- GET(openmeteo_url, query = list(
+  latitude = 53.38, # Same location as 2508 = Sheffield Devonshire Green
+  longitude = -1.47, # Same location as 2508 = Sheffield Devonshire Green
+  daily = "rain_sum", 
+  start_date = "2024-01-01",
+  end_date   = "2024-12-31",
+  timezone = "UTC"
+))
+
+# Parse the JSON data 
+openmeteo_data <- content(openmeteo, as = "text", encoding = "UTF-8") # Encoding tells R how to read the characters.  
+openmeteo_flat <- fromJSON(openmeteo_data, flatten = TRUE) # Converting JSON text to be readable for R by flattening the data 
+
+# Adding the flattened data into columns and rows 
+rain_df <- data.frame(
+  date = ymd(openmeteo_flat$daily$time),
+  rain_mm = openmeteo_flat$daily$rain  # values are in millimetres (mm)
+)
+
+write.csv(precip, "Sheffield_Rain_Hourly.csv", row.names = FALSE) # Ready for excel without the row numbers as a first column
+
+################
+##COMBINING THE DATA##
+################
+
+library(dplyr) # for the mutate and distinct function
+
+master_df <- pm25_daily %>%
+  left_join(rain_df, by = "date")
