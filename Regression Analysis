@@ -1,0 +1,18 @@
+################
+##CORRELATION ANALYSIS##
+################
+
+# Correlation analysis of the main data
+cor.test(master_df$rain_mm, master_df$pm25_avg) # 0.02239647 , p-value = 0.6698
+
+# Lagging pm2.5 and rain to see which is more significant 
+lagged_hourly <- master_df %>%
+  arrange(date) %>%
+  transmute(
+    date,
+    pm25_avg,
+    rain_mm,
+    rain_lag1 = lag(rain_mm, 1),
+    pm25_lag1 = lag(pm25_avg,1)
+  )
+
