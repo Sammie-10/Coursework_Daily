@@ -72,3 +72,5 @@ library(dplyr) # for the mutate and distinct function
 
 master_df <- pm25_daily %>%
   left_join(rain_df, by = "date")
+
+master_df$pm25_avg[master_df$pm25_avg == 0] <- NA # 2 datapoints for pm2.5 were 0
