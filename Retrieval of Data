@@ -20,7 +20,7 @@ result <- GET(
     datetime_from = "2024-01-01T00:00:00Z",
     datetime_to   = "2024-12-31T23:59:59Z"
   ),
-  add_headers("X-API-Key" = "2145ca5b8db97d3cd55567b117b99ca1db23f0b75fb2c12986529aa5276ef7dc")
+  add_headers("X-API-Key" = "MY-AQ-API")
 )
 
 # Parse JSON
