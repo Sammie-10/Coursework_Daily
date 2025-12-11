@@ -16,3 +16,81 @@ lagged_hourly <- master_df %>%
     pm25_lag1 = lag(pm25_avg,1)
   )
 
+cor.test(lagged_hourly$rain_lag1, lagged_hourly$pm25_avg) # 0.05335674, p-value = 0.31
+cor.test(lagged_hourly$rain_mm, lagged_hourly$pm25_lag1) # 0.07053277, p-value = 0.1788 -> more significant 
+
+################
+##DATA TRAINING##
+################
+
+master_shuffle <- master_df[sample(1:nrow(master_df)),]
+
+train_size = 0.7 # using 70% of data for training
+master_train <- master_shuffle[1:(train_size*nrow(master_shuffle)),]
+master_test <- master_shuffle[(nrow(master_train)+1):nrow(master_shuffle),]
+
+# Analysis of the trained data 
+mod_rain <- lm(
+  formula = pm25_avg~rain_mm,
+  data=master_train
+)
+
+# Data not lagged
+summary(mod_rain) # Intercept = 8.70759, rain_mm = 0.02258, p-value = 0.672
+coefs_rain <- coef(mod_rain) 
+
+ggplot(
+  data=master_train,
+  aes(x=rain_mm, y=pm25_avg)
+) + 
+  geom_point() +
+  geom_abline(mapping=aes(
+    slope=coefs_rain["rain_mm"],
+    intercept=coefs_rain["(Intercept)"]
+  ), color='red')
+
+# Lagged rain
+shuf_lag <- lagged_hourly[sample(1:nrow(master_df)),]
+
+train_size = 0.7 # using 70% of data for training
+shuf_rain_train <- shuf_lag[1:(train_size*nrow(shuf_lag)),]
+shuf_rain_test <- shuf_lag[(nrow(shuf_rain_train)+1):nrow(shuf_lag),]
+
+mod_rain_lag <- lm(
+  formula = pm25_avg~rain_lag1,
+  data=shuf_rain_train
+)
+
+summary(mod_rain_lag) # Intercept = 8.62033, rain_mm = 0.06611, p-value = 0.253
+coefs_rain_lag <- coef(mod_rain_lag)
+
+ggplot(
+  data=shuf_rain_train,
+  aes(x=rain_lag1, y=pm25_avg)
+) + 
+  geom_point() +
+  geom_abline(mapping=aes(
+    slope=coefs_rain_lag["rain_lag1"],
+    intercept=coefs_rain_lag["(Intercept)"]
+  ), color='red')
+
+#####
+
+mod_pm25_lag <- lm(
+  formula = pm25_lag1~rain_mm,
+  data=shuf_rain_train
+)
+
+summary(mod_pm25_lag)
+coefs_pm25_lag <- coef(mod_pm25_lag) # Intercept = 8.59957, rain_mm = 0.11556, p-value = 0.0407 (*)
+
+ggplot(
+  data=shuf_rain_train,
+  aes(x=rain_mm, y=pm25_lag1)
+) + 
+  geom_point() +
+  geom_abline(mapping=aes(
+    slope=coefs_pm25_lag["rain_mm"],
+    intercept=coefs_pm25_lag["(Intercept)"]
+  ), color='red')
+
